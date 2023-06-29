@@ -7,7 +7,7 @@ import os
 from urllib.parse import urlparse, parse_qs
 
 import websockets
-import requests
+from yt_dlp import YoutubeDL
 
 
 DOWNLOADS_DIR = "downloads"
@@ -23,9 +23,11 @@ async def process_request(path, request_headers):
         return http.HTTPStatus.OK, [], b"OK\n"
 
     if path == "/test":
-        r = requests.get("http://worldtimeapi.org/api/ip")
-        with open(os.path.join(DOWNLOADS_DIR, "test.json"), "wb") as f:
-            f.write(r.content)
+        opts = {"outtmpl": os.path.join(DOWNLOADS_DIR, "1.webm")}
+
+        with YoutubeDL(opts) as ydl:
+            ydl.download(["https://www.youtube.com/watch?v=zGDzdps75ns"])
+
         return http.HTTPStatus.OK, [], b"OK\n"
 
     if path == "/ls":
