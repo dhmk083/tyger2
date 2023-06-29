@@ -3,8 +3,10 @@
 import asyncio
 import http
 import signal
+import os
 
 import websockets
+import requests
 
 
 async def echo(websocket):
@@ -12,9 +14,18 @@ async def echo(websocket):
         await websocket.send(message)
 
 
-async def health_check(path, request_headers):
+async def process_request(path, request_headers):
     if path == "/healthz":
         return http.HTTPStatus.OK, [], b"OK\n"
+
+    if path == "/test":
+        r = requests.get("http://worldtimeapi.org/api/ip")
+        with open("test.json", "wb") as f:
+            f.write(r.content)
+        return http.HTTPStatus.OK, [], b"OK\n"
+
+    if path == "/ls":
+        return http.HTTPStatus.OK, [], "\n".join(os.listdir()).encode()
 
 
 async def main():
@@ -27,7 +38,7 @@ async def main():
         echo,
         host="",
         port=8080,
-        process_request=health_check,
+        process_request=process_request,
     ):
         await stop
 
