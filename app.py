@@ -5,6 +5,7 @@ import http
 import signal
 import os
 from urllib.parse import urlparse, parse_qs
+from pathlib import PurePath
 
 import websockets
 from yt_dlp import YoutubeDL
@@ -37,7 +38,20 @@ async def echo(websocket):
             def _send(self, msg):
                 asyncio.run(websocket.send(msg))
 
-        opts = {"outtmpl": os.path.join(DOWNLOADS_DIR, "1.webm"), "logger": Logger()}
+        filepath = ""
+
+        def pp_hook(d):
+            nonlocal filepath
+
+            fp = d["info_dict"].get("filepath")
+            if fp:
+                filepath = fp
+
+        opts = {
+            "outtmpl": os.path.join(DOWNLOADS_DIR, "%(channel)s - %(title)s.%(ext)s"),
+            "logger": Logger(),
+            "postprocessor_hooks": [pp_hook],
+        }
 
         def download():
             with YoutubeDL(opts) as ydl:
@@ -46,19 +60,11 @@ async def echo(websocket):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, download)
 
-        await websocket.send(message)
+        await websocket.send(PurePath("/", filepath).as_posix())
 
 
 async def process_request(path, request_headers):
     if path == "/healthz":
-        return http.HTTPStatus.OK, [], b"OK\n"
-
-    if path == "/test":
-        opts = {"outtmpl": os.path.join(DOWNLOADS_DIR, "1.webm")}
-
-        with YoutubeDL(opts) as ydl:
-            ydl.download(["https://www.youtube.com/watch?v=zGDzdps75ns"])
-
         return http.HTTPStatus.OK, [], b"OK\n"
 
     if path == "/ls":
