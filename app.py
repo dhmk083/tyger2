@@ -16,6 +16,7 @@ DOWNLOADS_DIR = "downloads"
 
 async def echo(websocket):
     async for message in websocket:
+        video_url = message
 
         class Logger:
             def debug(self, msg):
@@ -68,7 +69,7 @@ async def echo(websocket):
 
         def download():
             with YoutubeDL(opts) as ydl:
-                ydl.download(["https://www.youtube.com/watch?v=zGDzdps75ns"])
+                ydl.download([video_url])
 
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, download)
