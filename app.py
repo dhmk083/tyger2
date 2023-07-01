@@ -4,7 +4,6 @@ import asyncio
 import http
 import signal
 import os
-from urllib.parse import urlparse, parse_qs
 from pathlib import PurePath
 
 import websockets
@@ -67,20 +66,17 @@ async def process_request(path, request_headers):
     if path == "/healthz":
         return http.HTTPStatus.OK, [], b"OK\n"
 
-    if path == "/ls":
-        return http.HTTPStatus.OK, [], "\n".join(os.listdir()).encode()
+    if path.startswith("/" + DOWNLOADS_DIR):
+        filepath = path[1:]
 
-    if path.startswith("/get"):
-        q = urlparse(path).query
-        file = parse_qs(q)["file"][0]
-
-        with open(os.path.join(DOWNLOADS_DIR, file), "rb") as f:
-            return http.HTTPStatus.OK, [], f.read()
+        try:
+            with open(filepath, "rb") as f:
+                return http.HTTPStatus.OK, [], f.read()
+        except FileNotFoundError:
+            return http.HTTPStatus.NOT_FOUND, [], b""
 
 
 async def main():
-    os.makedirs(DOWNLOADS_DIR, exist_ok=True)
-
     # Set the stop condition when receiving SIGTERM.
     loop = asyncio.get_running_loop()
     stop = loop.create_future()
