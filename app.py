@@ -8,7 +8,7 @@ from pathlib import PurePath
 from urllib.parse import unquote
 
 import websockets
-from yt_dlp import YoutubeDL
+from yt_dlp import YoutubeDL, parse_options
 
 
 DOWNLOADS_DIR = "downloads"
@@ -47,11 +47,24 @@ async def echo(websocket):
             if fp:
                 filepath = fp
 
-        opts = {
-            "outtmpl": os.path.join(DOWNLOADS_DIR, "%(channel)s - %(title)s.%(ext)s"),
-            "logger": Logger(),
-            "postprocessor_hooks": [pp_hook],
-        }
+        output = os.path.join(DOWNLOADS_DIR, "%(channel)s - %(title)s.%(ext)s")
+
+        argv = [
+            "--embed-thumbnail",
+            "--embed-metadata",
+            *("--parse-metadata", "%(uploader)s:%(album)s"),
+            *("--output", output),
+            *("--format", "140"),
+        ]
+
+        opts = parse_options(argv)[3]
+
+        opts.update(
+            {
+                "logger": Logger(),
+                "postprocessor_hooks": [pp_hook],
+            }
+        )
 
         def download():
             with YoutubeDL(opts) as ydl:
