@@ -5,6 +5,7 @@ import http
 import signal
 import os
 from pathlib import PurePath
+from urllib.parse import unquote
 
 import websockets
 from yt_dlp import YoutubeDL
@@ -67,7 +68,7 @@ async def process_request(path, request_headers):
         return http.HTTPStatus.OK, [], b"OK\n"
 
     if path.startswith("/" + DOWNLOADS_DIR):
-        filepath = path[1:]
+        filepath = unquote(path[1:])
 
         try:
             with open(filepath, "rb") as f:
