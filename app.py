@@ -86,6 +86,13 @@ def serve_file(path):
     try:
         with open(path, "rb") as f:
             mime = guess_type(path)[0]
+
+            # small hack:
+            # `guess_type` gives `audio/mpeg` type which results into
+            # a file being downloaded incorrectly with `.mp3` extension
+            if path.endswith(".m4a"):
+                mime = "audio/mp4"
+
             return http.HTTPStatus.OK, {"Content-Type": mime}, f.read()
     except FileNotFoundError:
         return http.HTTPStatus.NOT_FOUND, [], b""
