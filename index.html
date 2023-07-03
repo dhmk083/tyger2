@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tyger2</title>
+
+    <style>
+      #formFields {
+        display: inline;
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      #formFields input {
+        width: min(400px, 90vw);
+        margin: 0.5em 0;
+      }
+
+      #log {
+        height: 400px;
+        overflow: auto;
+        border: 1px solid #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Tyger2</h1>
+    <p>
+      Converts video to audio with
+      <a href="https://github.com/yt-dlp/yt-dlp">YoutubeDLP</a>
+    </p>
+
+    <form onsubmit="onSubmit(event)">
+      <fieldset id="formFields">
+        <label>
+          URL
+          <input name="url" />
+        </label>
+
+        <button type="submit">Convert</button>
+      </fieldset>
+    </form>
+
+    <p>
+      Link will appear here:
+      <a id="download" href="" download class="isDisabled">Download</a>
+    </p>
+
+    <p>Log:</p>
+    <pre id="log"></pre>
+
+    <script>
+      const formFields = document.getElementById("formFields");
+      const download = document.getElementById("download");
+      const log = document.getElementById("log");
+
+      download.style.display = "none";
+
+      function onSubmit(ev) {
+        ev.preventDefault();
+
+        const fd = new FormData(ev.target);
+        const url = fd.get("url");
+
+        if (!url) return alert("Please enter a valid url!");
+
+        formFields.disabled = true;
+        download.style.display = "none";
+        log.textContent = "";
+
+        const socket = new WebSocket(`ws://${location.host}/ws`);
+
+        socket.onopen = () => {
+          socket.send(url);
+        };
+
+        socket.onmessage = (ev) => {
+          const message = ev.data;
+
+          console.log(message);
+          log.append(message + "\n");
+          log.scrollTop = log.scrollHeight;
+
+          if (message.startsWith("@@@")) {
+            const url = message.slice(4);
+            download.style.display = "";
+            download.href = url;
+            alert("File converted!");
+          }
+        };
+
+        socket.onerror = (ev) => {
+          console.log("error", ev);
+        };
+
+        socket.onclose = (ev) => {
+          console.log("close", ev);
+          formFields.disabled = false;
+        };
+      }
+    </script>
+  </body>
+</html>

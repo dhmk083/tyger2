@@ -6,6 +6,7 @@ import signal
 import os
 from pathlib import PurePath
 from urllib.parse import unquote
+from mimetypes import guess_type
 
 import websockets
 from yt_dlp import YoutubeDL, parse_options
@@ -51,11 +52,12 @@ async def echo(websocket):
         output = os.path.join(DOWNLOADS_DIR, "%(channel)s - %(title)s.%(ext)s")
 
         argv = [
+            "--no-colors",
             "--embed-thumbnail",
             "--embed-metadata",
             *("--parse-metadata", "%(uploader)s:%(album)s"),
             *("--output", output),
-            *("--format", "140"),
+            *("--format", "m4a"),
         ]
 
         opts = parse_options(argv)[3]
@@ -74,21 +76,31 @@ async def echo(websocket):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, download)
 
-        await websocket.send(PurePath("/", filepath).as_posix())
+        if filepath:
+            await websocket.send("@@@ " + PurePath("/", filepath).as_posix())
+
+        await websocket.close()
+
+
+def serve_file(path):
+    try:
+        with open(path, "rb") as f:
+            mime = guess_type(path)[0]
+            return http.HTTPStatus.OK, {"Content-Type": mime}, f.read()
+    except FileNotFoundError:
+        return http.HTTPStatus.NOT_FOUND, [], b""
 
 
 async def process_request(path, request_headers):
     if path == "/healthz":
         return http.HTTPStatus.OK, [], b"OK\n"
 
+    if path == "/":
+        return serve_file("index.html")
+
     if path.startswith("/" + DOWNLOADS_DIR):
         filepath = unquote(path[1:])
-
-        try:
-            with open(filepath, "rb") as f:
-                return http.HTTPStatus.OK, [], f.read()
-        except FileNotFoundError:
-            return http.HTTPStatus.NOT_FOUND, [], b""
+        return serve_file(filepath)
 
 
 async def main():
