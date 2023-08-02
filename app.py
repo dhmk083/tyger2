@@ -98,7 +98,7 @@ def serve_file(path, headers):
             file_size = f.tell()
 
             start = 0
-            end = file_size
+            end = file_size  # past-the-end style
 
             range_header = headers.get_all("Range")
             if range_header:
@@ -121,6 +121,8 @@ def serve_file(path, headers):
 
                     if end is None:
                         end = file_size
+                    else:
+                        end += 1  # convert to past-the-end
                 except AssertionError:
                     return http.HTTPStatus.REQUESTED_RANGE_NOT_SATISFIABLE, [], b""
 
@@ -134,7 +136,7 @@ def serve_file(path, headers):
             }
 
             if range_header:
-                headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+                headers["Content-Range"] = f"bytes {start}-{end - 1}/{file_size}"
 
             status = (
                 http.HTTPStatus.PARTIAL_CONTENT if range_header else http.HTTPStatus.OK
