@@ -39,24 +39,19 @@
           <input name="url" />
         </label>
 
-        <button type="submit">Convert</button>
+        <button type="submit">Download</button>
       </fieldset>
     </form>
 
-    <p>
-      Link will appear here:
-      <a id="download" href="" download class="isDisabled">Download</a>
-    </p>
+    <a id="download" href=""></a>
 
     <p>Log:</p>
     <pre id="log"></pre>
 
     <script>
       const formFields = document.getElementById("formFields");
-      const download = document.getElementById("download");
-      const log = document.getElementById("log");
-
-      download.style.display = "none";
+      const downloadLink = document.getElementById("download");
+      const logger = document.getElementById("log");
 
       function onSubmit(ev) {
         ev.preventDefault();
@@ -67,8 +62,7 @@
         if (!url) return alert("Please enter a valid url!");
 
         formFields.disabled = true;
-        download.style.display = "none";
-        log.textContent = "";
+        logger.textContent = "";
 
         const protocol = location.protocol == "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${protocol}://${location.host}/ws`);
@@ -80,15 +74,12 @@
         socket.onmessage = (ev) => {
           const message = ev.data;
 
-          console.log(message);
-          log.append(message + "\n");
-          log.scrollTop = log.scrollHeight;
+          log(message);
 
           if (message.startsWith("@@@")) {
             const url = message.slice(4);
-            download.style.display = "";
-            download.href = url;
-            alert("File converted!");
+            log("File converted!");
+            download(url);
           }
         };
 
@@ -100,6 +91,63 @@
           console.log("close", ev);
           formFields.disabled = false;
         };
+      }
+
+      function log(s) {
+        console.log(s);
+        logger.append(s + "\n");
+        logger.scrollTop = logger.scrollHeight;
+      }
+
+      async function download(url) {
+        const parts = [];
+        let offset = 0;
+        let over;
+
+        const timer = setInterval(() => {
+          log("fetch offset: " + offset);
+        }, 1000);
+
+        log("fetching...");
+
+        while (!over) {
+          const { abort, signal } = new AbortController();
+
+          try {
+            const response = await Promise.race([
+              fetch(url, {
+                headers: {
+                  Range: `bytes=${offset}-`,
+                },
+                signal,
+              }),
+              new Promise((res, rej) =>
+                setTimeout(() => rej(new Error("fetch timeout error")), 5000)
+              ),
+            ]);
+            const reader = response.body.getReader();
+
+            while (!over) {
+              const { done, value } = await reader.read();
+              over = done;
+
+              if (over) {
+                const objectUrl = URL.createObjectURL(new Blob(parts));
+                downloadLink.href = objectUrl;
+                downloadLink.download = url.split("/").pop();
+                downloadLink.click();
+              } else {
+                parts.push(value);
+                offset += value.length;
+              }
+            }
+          } catch (e) {
+            log(e.message);
+            abort();
+          }
+        }
+
+        clearInterval(timer);
       }
     </script>
   </body>
