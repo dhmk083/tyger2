@@ -107,12 +107,16 @@
 
         const timer = setInterval(
           (() => {
-            let lastOffset;
+            let lastProgress;
 
             return () => {
-              if (size && lastOffset !== offset) {
-                lastOffset = offset;
-                log("[fetch] " + Math.floor((offset / size) * 100) + "%");
+              if (size) {
+                const progress = Math.floor((offset / size) * 100);
+
+                if (lastProgress !== progress) {
+                  lastProgress = progress;
+                  log(`[fetch] ${progress}%`);
+                }
               }
             };
           })(),
@@ -151,10 +155,12 @@
               over = done;
 
               if (over) {
+                log("[fetch] done");
                 const objectUrl = URL.createObjectURL(new Blob(parts));
                 downloadLink.href = objectUrl;
                 downloadLink.download = url.split("/").pop();
                 downloadLink.click();
+                log("[downloading...]");
               } else {
                 parts.push(value);
                 offset += value.length;
