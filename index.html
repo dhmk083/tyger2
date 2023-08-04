@@ -102,33 +102,52 @@
       async function download(url) {
         const parts = [];
         let offset = 0;
+        let size = 0;
         let over;
 
-        const timer = setInterval(() => {
-          log("fetch offset: " + offset);
-        }, 1000);
+        const timer = setInterval(
+          (() => {
+            let lastOffset;
 
-        log("fetching...");
+            return () => {
+              if (size && lastOffset !== offset) {
+                lastOffset = offset;
+                log("[fetch] " + Math.floor((offset / size) * 100) + "%");
+              }
+            };
+          })(),
+          1000
+        );
+
+        log("[fetching...]");
 
         while (!over) {
-          const { abort, signal } = new AbortController();
+          const ac = new AbortController();
 
           try {
-            const response = await Promise.race([
-              fetch(url, {
-                headers: {
-                  Range: `bytes=${offset}-`,
-                },
-                signal,
-              }),
-              new Promise((res, rej) =>
-                setTimeout(() => rej(new Error("fetch timeout error")), 5000)
-              ),
-            ]);
+            const response = await fetch(url, {
+              headers: {
+                Range: `bytes=${offset}-`,
+              },
+              signal: ac.signal,
+            });
+
             const reader = response.body.getReader();
 
+            size = parseInt(
+              response.headers.get("content-range").split("/")[1]
+            );
+
             while (!over) {
-              const { done, value } = await reader.read();
+              const { done, value } = await Promise.race([
+                reader.read(),
+                new Promise((res, rej) =>
+                  setTimeout(
+                    () => rej(new Error("[fetch] timeout error")),
+                    3000
+                  )
+                ),
+              ]);
               over = done;
 
               if (over) {
@@ -143,8 +162,11 @@
             }
           } catch (e) {
             log(e.message);
-            abort();
+            ac.abort();
           }
+
+          // pause for UI
+          await new Promise((res) => setTimeout(res, 1000));
         }
 
         clearInterval(timer);
