@@ -78,7 +78,6 @@
 
           if (message.startsWith("@@@")) {
             const url = message.slice(4);
-            log("File converted!");
             download(url);
           }
         };
@@ -89,7 +88,6 @@
 
         socket.onclose = (ev) => {
           console.log("close", ev);
-          formFields.disabled = false;
         };
       }
 
@@ -155,11 +153,13 @@
               over = done;
 
               if (over) {
+                clearInterval(timer);
                 log("[fetch] done");
                 const objectUrl = URL.createObjectURL(new Blob(parts));
                 downloadLink.href = objectUrl;
                 downloadLink.download = url.split("/").pop();
                 downloadLink.click();
+                formFields.disabled = false;
                 log("[downloading...]");
               } else {
                 parts.push(value);
@@ -174,8 +174,6 @@
           // pause for UI
           await new Promise((res) => setTimeout(res, 1000));
         }
-
-        clearInterval(timer);
       }
     </script>
   </body>
