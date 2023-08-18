@@ -134,6 +134,11 @@
               signal: ac.signal,
             });
 
+            if (!response.ok)
+              throw new Error(
+                `[fetch]: ${response.status} ${response.statusText}`
+              );
+
             const reader = response.body.getReader();
 
             size = parseInt(
