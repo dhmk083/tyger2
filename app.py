@@ -59,6 +59,7 @@ async def echo(websocket):
             *("--parse-metadata", "%(uploader)s:%(album)s"),
             *("--output", output),
             *("--format", "m4a"),
+            *("--user-agent", "tyger"),
         ]
 
         opts = parse_options(argv)[3]
