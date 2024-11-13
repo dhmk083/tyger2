@@ -5,6 +5,7 @@ import http
 import signal
 import os
 import re
+import ssl
 from pathlib import PurePath
 from urllib.parse import unquote
 from mimetypes import guess_type
@@ -167,10 +168,14 @@ async def main():
     if os.name != "nt":
         loop.add_signal_handler(signal.SIGTERM, stop.set_result, None)
 
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain("localhost.crt", "localhost.key")
+
     async with websockets.serve(
         echo,
         host="",
         port=8080,
+        ssl=ssl_context,
         process_request=process_request,
     ):
         await stop
