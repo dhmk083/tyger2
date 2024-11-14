@@ -1,2 +1,2 @@
-websockets
+websockets == 13.*
 yt-dlp
