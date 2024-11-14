@@ -17,11 +17,6 @@ from yt_dlp import YoutubeDL, parse_options
 DOWNLOADS_DIR = "downloads"
 
 
-async def set_timeout(fn, s):
-    await asyncio.sleep(s)
-    fn()
-
-
 async def echo(websocket):
     async for message in websocket:
         video_url = message
@@ -86,7 +81,7 @@ async def echo(websocket):
 
         if filepath:
             await websocket.send("@@@ " + PurePath("/", filepath).as_posix())
-            loop.create_task(set_timeout(lambda: os.unlink(filepath), 5 * 60))
+            loop.call_later(5 * 60, os.unlink, filepath)
 
         await websocket.close()
 
